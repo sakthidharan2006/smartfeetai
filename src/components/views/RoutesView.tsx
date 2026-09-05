@@ -25,6 +25,8 @@ export function RoutesView() {
     eta: string;
     startTime: string;
   }[]>([]);
+  const [corridorSource, setCorridorSource] = useState("Mumbai, Maharashtra");
+  const [corridorDest, setCorridorDest] = useState("Pune, Maharashtra");
 
   // Generate trips from simulation vehicles
   const indianRoutes = [
@@ -176,12 +178,28 @@ export function RoutesView() {
 
         {/* Tab 1: AI Route Optimizer */}
         <TabsContent value="optimizer" className="space-y-6 mt-0">
-          <AIRouteOptimizer onSelectRoute={handleAdoptRoute} canDispatch={!isDriver} />
+          <AIRouteOptimizer
+            initialSource={corridorSource}
+            initialDestination={corridorDest}
+            onCorridorChange={(s, d) => {
+              setCorridorSource(s);
+              setCorridorDest(d);
+            }}
+            onSelectRoute={handleAdoptRoute}
+            canDispatch={!isDriver}
+          />
         </TabsContent>
 
         {/* Tab 2: Weather & Hazards Radar */}
         <TabsContent value="weather-radar" className="space-y-4 mt-0">
-          <WeatherHazardRadarPanel />
+          <WeatherHazardRadarPanel
+            source={corridorSource}
+            destination={corridorDest}
+            onCorridorChange={(s, d) => {
+              setCorridorSource(s);
+              setCorridorDest(d);
+            }}
+          />
         </TabsContent>
 
         {/* Tab 3: Active & Scheduled Trips */}

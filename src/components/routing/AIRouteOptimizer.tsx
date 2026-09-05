@@ -70,6 +70,7 @@ interface Props {
   initialDestination?: string;
   onSelectRoute?: (route: RouteOption, source: string, destination: string) => void;
   canDispatch?: boolean;
+  onCorridorChange?: (source: string, destination: string) => void;
 }
 
 export function AIRouteOptimizer({
@@ -77,6 +78,7 @@ export function AIRouteOptimizer({
   initialDestination = "Pune, Maharashtra",
   onSelectRoute,
   canDispatch = true,
+  onCorridorChange,
 }: Props) {
   const [source, setSource] = useState(initialSource);
   const [destination, setDestination] = useState(initialDestination);
@@ -589,6 +591,13 @@ export function AIRouteOptimizer({
           </DialogHeader>
 
           <WeatherHazardRadarPanel
+            source={source}
+            destination={destination}
+            onCorridorChange={(s, d) => {
+              setSource(s);
+              setDestination(d);
+              if (onCorridorChange) onCorridorChange(s, d);
+            }}
             hazards={hazards}
             onSimulateEvent={handleSimulateWeather}
           />

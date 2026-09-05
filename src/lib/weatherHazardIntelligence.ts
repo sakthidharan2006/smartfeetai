@@ -1,3 +1,6 @@
+import { findLocationCoordinates } from "@/data/indianLocations";
+import { getHaversineDistanceKm } from "./routeIntelligence";
+
 /**
  * Weather & Road Hazards Radar Intelligence Engine
  *
@@ -196,16 +199,207 @@ export const INITIAL_WEATHER_HAZARDS: WeatherHazard[] = [
     expectedClearTime: "Drainage in progress (1-2 hrs)",
     active: true,
   },
+  {
+    id: "wh-chn-cbe-ranipet",
+    corridor: "chennai-coimbatore",
+    locationName: "NH-48 Sriperumbudur–Ranipet Industrial Stretch (km 76)",
+    category: "monsoon_flood",
+    severity: "warning",
+    coordinates: [12.9200, 79.3300],
+    radiusKm: 10.0,
+    headline: "Monsoon Downpour & Standing Water in Outer Lanes",
+    description: "Sudden seasonal downpour (31 mm/h). Standing water in low-lying sections increases truck braking distance.",
+    visibilityMeters: 220,
+    precipitationMmPerHour: 31.0,
+    windSpeedKmh: 36,
+    temperatureCelsius: 26,
+    roadCondition: "wet_slippery",
+    safeSpeedLimitKmh: 45,
+    driverGuidance: "Maintain 60m following distance. Avoid sudden lane changes on wet expansion joints.",
+    safeShelterName: "Ranipet SIPCOT Logistics Layby (km 82)",
+    safeShelterCoords: [12.9300, 79.3400],
+    detectedAt: new Date(),
+    expectedClearTime: "In ~40 minutes",
+    active: true,
+  },
+  {
+    id: "wh-chn-cbe-thoppur",
+    corridor: "chennai-coimbatore",
+    locationName: "NH-544 Thoppur–Dharmapuri Ghat Pass (km 282)",
+    category: "ghat_landslide",
+    severity: "critical",
+    coordinates: [11.9600, 78.0800],
+    radiusKm: 6.0,
+    headline: "Thoppur S-Curves Steep Incline & Heavy Convoy Braking Caution",
+    description: "High downhill momentum zone with heavy truck queueing. Slick tarmac from mountain drizzle.",
+    visibilityMeters: 350,
+    precipitationMmPerHour: 14.0,
+    windSpeedKmh: 28,
+    temperatureCelsius: 24,
+    roadCondition: "wet_slippery",
+    safeSpeedLimitKmh: 35,
+    driverGuidance: "Shift to Gear 2/3 before gradient begins. Rely on auxiliary exhaust brake, avoid continuous service brake friction.",
+    safeShelterName: "Thoppur Highway Food Mall & Truck Rest Area",
+    safeShelterCoords: [11.9700, 78.0900],
+    detectedAt: new Date(),
+    expectedClearTime: "Clearing in 1 hr",
+    active: true,
+  },
+  {
+    id: "wh-chn-cbe-avinashi",
+    corridor: "chennai-coimbatore",
+    locationName: "NH-544 Avinashi–Tirupur Expressway Belt (km 435)",
+    category: "crosswinds",
+    severity: "advisory",
+    coordinates: [11.1900, 77.2700],
+    radiusKm: 12.0,
+    headline: "Lateral Crosswind Gusts (48 km/h) & Spray",
+    description: "Open highway plain crosswinds causing trailer drift on empty container chassis.",
+    visibilityMeters: 2000,
+    precipitationMmPerHour: 0,
+    windSpeedKmh: 48,
+    temperatureCelsius: 28,
+    roadCondition: "dry",
+    safeSpeedLimitKmh: 65,
+    driverGuidance: "Maintain center of lane. High-cube trailers keep firm two-handed grip.",
+    safeShelterName: "Avinashi Toll Commercial Truck Plaza",
+    safeShelterCoords: [11.2000, 77.2800],
+    detectedAt: new Date(),
+    expectedClearTime: "Ongoing afternoon breeze",
+    active: true,
+  },
 ];
 
 /**
- * Filter hazards for a given Source -> Destination pair
+ * Generates dynamic, realistic meteorological and road hazards for ANY Source -> Destination across India
+ */
+export function generateDynamicCorridorHazards(source: string, destination: string): WeatherHazard[] {
+  const srcClean = source.trim();
+  const destClean = destination.trim();
+  const srcCity = srcClean.split(",")[0].trim();
+  const destCity = destClean.split(",")[0].trim();
+
+  const srcCoords = findLocationCoordinates(srcClean);
+  const destCoords = findLocationCoordinates(destClean);
+
+  const directDistKm = Math.max(30, getHaversineDistanceKm(srcCoords, destCoords));
+  const highwayDistKm = Math.round(directDistKm * 1.25);
+
+  const dLat = destCoords[0] - srcCoords[0];
+  const dLng = destCoords[1] - srcCoords[1];
+
+  // Point 1 at ~35% of distance
+  const p1Coords: [number, number] = [
+    Number((srcCoords[0] + dLat * 0.35).toFixed(4)),
+    Number((srcCoords[1] + dLng * 0.35).toFixed(4)),
+  ];
+
+  // Point 2 at ~72% of distance
+  const p2Coords: [number, number] = [
+    Number((srcCoords[0] + dLat * 0.72).toFixed(4)),
+    Number((srcCoords[1] + dLng * 0.72).toFixed(4)),
+  ];
+
+  const avgLat = (srcCoords[0] + destCoords[0]) / 2;
+  const isNorthernBelt = avgLat > 24.5;
+  const isSouthernBelt = avgLat < 16.0;
+
+  const h1Category: HazardCategory = isNorthernBelt ? "dense_fog" : "monsoon_flood";
+  const h2Category: HazardCategory = isSouthernBelt ? "ghat_landslide" : isNorthernBelt ? "extreme_heat" : "crosswinds";
+
+  const hazard1: WeatherHazard = {
+    id: `dyn-wh-1-${srcCity.toLowerCase()}-${destCity.toLowerCase()}`,
+    corridor: `${srcCity.toLowerCase()}-${destCity.toLowerCase()}`,
+    locationName: `${srcCity}–${destCity} Expressway Sector (km ${Math.round(highwayDistKm * 0.35)})`,
+    category: h1Category,
+    severity: "warning",
+    coordinates: p1Coords,
+    radiusKm: 9.0,
+    headline:
+      h1Category === "dense_fog"
+        ? `Dense Morning Smog & Visibility Drop (< 50m)`
+        : `Monsoon Aquaplaning Risk & Heavy Downpour`,
+    description:
+      h1Category === "dense_fog"
+        ? `Low-visibility winter inversion layer observed on highway stretch. High risk of chain collision on multi-axle freight.`
+        : `Intense localized showers with standing water pockets along outer lanes. Potential hydroplaning risk.`,
+    visibilityMeters: h1Category === "dense_fog" ? 45 : 220,
+    precipitationMmPerHour: h1Category === "dense_fog" ? 0 : 34.0,
+    windSpeedKmh: h1Category === "dense_fog" ? 9 : 38,
+    temperatureCelsius: h1Category === "dense_fog" ? 14 : 25,
+    roadCondition: h1Category === "dense_fog" ? "fog_blind" : "waterlogged",
+    safeSpeedLimitKmh: 45,
+    driverGuidance:
+      h1Category === "dense_fog"
+        ? `Activate yellow fog lamps and strictly track lane edge markers. Maintain 70m vehicle following distance.`
+        : `Reduce speed to 45 km/h. Avoid abrupt braking in water channels. Check tire grip and brake drum clearance.`,
+    safeShelterName: `${srcCity} Outer Bypass Commercial Truck Haven & Food Plaza`,
+    safeShelterCoords: [
+      Number((p1Coords[0] - 0.02).toFixed(4)),
+      Number((p1Coords[1] - 0.02).toFixed(4)),
+    ],
+    detectedAt: new Date(),
+    expectedClearTime: "In ~50 minutes",
+    active: true,
+  };
+
+  const hazard2: WeatherHazard = {
+    id: `dyn-wh-2-${srcCity.toLowerCase()}-${destCity.toLowerCase()}`,
+    corridor: `${srcCity.toLowerCase()}-${destCity.toLowerCase()}`,
+    locationName: `Interstate Highway Corridor approaching ${destCity} (km ${Math.round(highwayDistKm * 0.72)})`,
+    category: h2Category,
+    severity: "critical",
+    coordinates: p2Coords,
+    radiusKm: 12.0,
+    headline:
+      h2Category === "ghat_landslide"
+        ? `Ghat Curve Slippage & Rolling Debris Warning`
+        : h2Category === "extreme_heat"
+        ? `Extreme Road Surface Temperature Warning (Tire Blowout Risk)`
+        : `High-Speed Lateral Crosswind Gusts (58 km/h)`,
+    description:
+      h2Category === "ghat_landslide"
+        ? `Ghat section pavement slick from seepage; heavy commercial vehicles crawling on single lane.`
+        : h2Category === "extreme_heat"
+        ? `Highway tarmac surface exceeding 52°C. High risk of tire delamination and thermal blowout under full axle load.`
+        : `Strong lateral crosswinds across open elevated plains. Risk of trailer sway on high-cube container haulers.`,
+    visibilityMeters: 1200,
+    precipitationMmPerHour: h2Category === "ghat_landslide" ? 22 : 0,
+    windSpeedKmh: h2Category === "crosswinds" ? 58 : 24,
+    temperatureCelsius: h2Category === "extreme_heat" ? 44 : 26,
+    roadCondition: h2Category === "ghat_landslide" ? "debris_strewn" : "dry",
+    safeSpeedLimitKmh: h2Category === "ghat_landslide" ? 30 : 55,
+    driverGuidance:
+      h2Category === "ghat_landslide"
+        ? `Use auxiliary engine retarder/exhaust brake on declines. Do not overtake on blind hairpins.`
+        : h2Category === "extreme_heat"
+        ? `Check TPMS wheel temperatures. Halt at nearest layby if tire temperature exceeds 85°C. Do not bleed hot tire pressure.`
+        : `Firm two-handed steering grip required. High-cube trailers reduce speed by 15 km/h.`,
+    safeShelterName: `${destCity} Highway Authority Heavy Freight Rest Terminal`,
+    safeShelterCoords: [
+      Number((p2Coords[0] + 0.02).toFixed(4)),
+      Number((p2Coords[1] + 0.02).toFixed(4)),
+    ],
+    detectedAt: new Date(),
+    expectedClearTime: "Ongoing regional condition",
+    active: true,
+  };
+
+  return [hazard1, hazard2];
+}
+
+/**
+ * Filter or dynamically synthesize hazards for a given Source -> Destination pair across India
  */
 export function getHazardsForCorridor(
   source: string,
   destination: string,
   allHazards: WeatherHazard[] = INITIAL_WEATHER_HAZARDS
 ): WeatherHazard[] {
+  if (!source || !destination) {
+    return allHazards.filter((h) => h.active);
+  }
+
   const cleanSource = source.toLowerCase();
   const cleanDest = destination.toLowerCase();
 
@@ -226,6 +420,10 @@ export function getHazardsForCorridor(
     (cleanSource.includes("ahmedabad") && cleanDest.includes("surat")) ||
     (cleanSource.includes("surat") && cleanDest.includes("ahmedabad"));
 
+  const isChnCbe =
+    (cleanSource.includes("chennai") && cleanDest.includes("coimbatore")) ||
+    (cleanSource.includes("coimbatore") && cleanDest.includes("chennai"));
+
   if (isMumbaiPune) {
     return allHazards.filter((h) => h.corridor === "mumbai-pune" && h.active);
   }
@@ -238,9 +436,12 @@ export function getHazardsForCorridor(
   if (isAhdSurat) {
     return allHazards.filter((h) => h.corridor === "ahmedabad-surat" && h.active);
   }
+  if (isChnCbe) {
+    return allHazards.filter((h) => h.corridor === "chennai-coimbatore" && h.active);
+  }
 
-  // Fallback: return any hazard with coordinates within 150km or first 2 active
-  return allHazards.filter((h) => h.active).slice(0, 2);
+  // Dynamic Synthesis for ANY other arbitrary Indian Source -> Destination corridor
+  return generateDynamicCorridorHazards(source, destination);
 }
 
 /**
