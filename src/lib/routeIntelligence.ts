@@ -80,30 +80,42 @@ export const CITY_COORDINATES: Record<string, [number, number]> = {
   "chandigarh": [30.7333, 76.7794],
 };
 
-export const POPULAR_LOGISTICS_HUBS = [
-  "Mumbai, Maharashtra",
-  "Pune, Maharashtra",
-  "Delhi / NCR",
-  "Jaipur, Rajasthan",
-  "Bengaluru, Karnataka",
-  "Chennai, Tamil Nadu",
-  "Ahmedabad, Gujarat",
-  "Surat, Gujarat",
-  "Hyderabad, Telangana",
-  "Kolkata, West Bengal",
-  "Nagpur, Maharashtra",
-  "Lucknow, Uttar Pradesh",
-];
+import { findLocationCoordinates, POPULAR_INDIAN_FREIGHT_HUBS } from "@/data/indianLocations";
+
+export const POPULAR_LOGISTICS_HUBS = POPULAR_INDIAN_FREIGHT_HUBS;
 
 const FUEL_PRICE_PER_LITRE_INR = 94.5; // Average Indian Diesel price
 
+/**
+ * Accurately calculates straight-line great-circle distance between two GPS coordinates
+ */
+export function getHaversineDistanceKm(c1: [number, number], c2: [number, number]): number {
+  const R = 6371; // Earth's mean radius in km
+  const lat1 = (c1[0] * Math.PI) / 180;
+  const lat2 = (c2[0] * Math.PI) / 180;
+  const dLat = ((c2[0] - c1[0]) * Math.PI) / 180;
+  const dLng = ((c2[1] - c1[1]) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
 export function getCoordinatesForCity(cityStr: string): [number, number] {
+  if (!cityStr) return [20.5937, 78.9629];
+  // 1. First check our comprehensive Indian locations database
+  const resolved = findLocationCoordinates(cityStr);
+  if (resolved && (resolved[0] !== 21.1458 || resolved[1] !== 79.0882)) {
+    return resolved;
+  }
+  // 2. Check fallback city coordinates
   const clean = cityStr.toLowerCase();
   for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
     if (clean.includes(key)) return coords;
   }
-  // Default central India fallback
-  return [20.5937, 78.9629];
+  return resolved || [20.5937, 78.9629];
 }
 
 // Generate intermediate curved coordinates between two points
@@ -527,23 +539,28 @@ export function analyzeRoutes(
       },
     ];
   } else {
-    // Dynamic Synthesis for any arbitrary Source -> Destination with curved paths
-    const baseDist = Math.floor(180 + Math.random() * 240); // 180 - 420 km
-    const expDist = Math.round(baseDist * 1.05);
+    // Dynamic Synthesis for any arbitrary Source -> Destination across India with accurate geography & highway routing
+    const directKm = getHaversineDistanceKm(sourceCoords, destCoords);
+    // Indian road network circuity factor: typically 1.20 to 1.35 of straight-line distance
+    const baseDist = Math.max(25, Math.round(directKm * 1.25));
+    const expDist = Math.round(baseDist * 1.04);
     const nhDist = baseDist;
-    const shDist = Math.round(baseDist * 0.94);
+    const shDist = Math.max(20, Math.round(baseDist * 0.95));
 
     const expDuration = Math.round((expDist / 72) * 60 + 15);
     const nhDuration = Math.round((nhDist / 54) * 60 + 40);
     const shDuration = Math.round((shDist / 38) * 60 + 80);
 
-    const expFuel = Number(((expDist / 100) * 26.5).toFixed(1));
-    const nhFuel = Number(((nhDist / 100) * 31.0).toFixed(1));
-    const shFuel = Number(((shDist / 100) * 35.5).toFixed(1));
+    const expFuel = Number(((expDist / 100) * 28.5).toFixed(1));
+    const nhFuel = Number(((nhDist / 100) * 31.5).toFixed(1));
+    const shFuel = Number(((shDist / 100) * 36.0).toFixed(1));
 
     const expToll = Math.round(expDist * 1.6);
     const nhToll = Math.round(nhDist * 1.1);
     const shToll = 0;
+
+    // Determine curvature resolution based on corridor distance
+    const pathSteps = baseDist > 1000 ? 16 : baseDist > 500 ? 12 : 9;
 
     routes = [
       {
@@ -572,7 +589,7 @@ export function analyzeRoutes(
         ],
         tradeOffs: `Higher toll fee (₹${expToll}) compensated by transit speed and cargo safety.`,
         waypoints: [`${source} Toll Gate`, "Interstate Expressway Hub", `${destination} Ring Road`],
-        pathCoordinates: generateCurvedPath(sourceCoords, destCoords, 9, 0.08),
+        pathCoordinates: generateCurvedPath(sourceCoords, destCoords, pathSteps, 0.08),
         tollGates: [
           {
             name: `${source.split(",")[0]} Expressway Plaza`,
@@ -609,7 +626,7 @@ export function analyzeRoutes(
         ],
         tradeOffs: `Adds ${formatMinutes(nhDuration - expDuration)} transit time and Burns ~${(nhFuel - expFuel).toFixed(1)}L extra fuel due to stops.`,
         waypoints: [`${source} Outer Bypass`, "District Junction", `${destination} Central`],
-        pathCoordinates: generateCurvedPath(sourceCoords, destCoords, 9, -0.04),
+        pathCoordinates: generateCurvedPath(sourceCoords, destCoords, pathSteps, -0.04),
         tollGates: [
           {
             name: `${source.split(",")[0]} NH Plaza`,
@@ -643,7 +660,7 @@ export function analyzeRoutes(
         keyBenefits: ["Zero toll costs (₹0)"],
         tradeOffs: "Severe delay, high accident rate, and highest engine thermal wear.",
         waypoints: [`${source} Rural Connector`, "Township Main Street", `${destination} South`],
-        pathCoordinates: generateCurvedPath(sourceCoords, destCoords, 9, -0.12),
+        pathCoordinates: generateCurvedPath(sourceCoords, destCoords, pathSteps, -0.12),
       },
     ];
   }

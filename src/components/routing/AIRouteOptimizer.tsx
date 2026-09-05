@@ -39,6 +39,7 @@ import {
   Gauge,
   Sparkles,
   ArrowRight,
+  ArrowLeftRight,
   AlertTriangle,
   CheckCircle2,
   MapPin,
@@ -48,8 +49,21 @@ import {
   CloudRain,
   CloudFog,
 } from "lucide-react";
+import { LocationSearchInput } from "./LocationSearchInput";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const QUICK_CORRIDORS = [
+  { name: "Mumbai ↔ Pune", src: "Mumbai, Maharashtra", dest: "Pune, Maharashtra" },
+  { name: "Bengaluru ↔ Chennai", src: "Bengaluru (Bangalore), Karnataka", dest: "Chennai, Tamil Nadu" },
+  { name: "Chennai ↔ Coimbatore", src: "Chennai, Tamil Nadu", dest: "Coimbatore, Tamil Nadu" },
+  { name: "Delhi ↔ Jaipur", src: "Delhi / NCR", dest: "Jaipur, Rajasthan" },
+  { name: "Ahmedabad ↔ Surat", src: "Ahmedabad, Gujarat", dest: "Surat, Gujarat" },
+  { name: "Hyderabad ↔ Visakhapatnam", src: "Hyderabad, Telangana", dest: "Visakhapatnam (Vizag), Andhra Pradesh" },
+  { name: "Delhi ↔ Mumbai", src: "Delhi / NCR", dest: "Mumbai, Maharashtra" },
+  { name: "Kolkata ↔ Patna", src: "Kolkata (Calcutta), West Bengal", dest: "Patna, Bihar" },
+  { name: "Kochi ↔ Coimbatore", src: "Kochi (Cochin), Kerala", dest: "Coimbatore, Tamil Nadu" },
+];
 
 interface Props {
   initialSource?: string;
@@ -142,6 +156,30 @@ export function AIRouteOptimizer({
     }, 900);
   };
 
+  const handleSwapLocations = () => {
+    const oldSrc = source;
+    const oldDest = destination;
+    setSource(oldDest);
+    setDestination(oldSrc);
+    const res = analyzeRoutes(oldDest, oldSrc, cargoType);
+    setResult(res);
+    setSelectedRouteId(res.recommendedRouteId);
+    toast.info("Swapped Origin & Destination", {
+      description: `${oldDest} ↔ ${oldSrc}`,
+    });
+  };
+
+  const handleQuickSelect = (src: string, dest: string) => {
+    setSource(src);
+    setDestination(dest);
+    const res = analyzeRoutes(src, dest, cargoType);
+    setResult(res);
+    setSelectedRouteId(res.recommendedRouteId);
+    toast.success("Corridor Loaded", {
+      description: `${src} → ${dest}`,
+    });
+  };
+
   const handleAdopt = (route: RouteOption) => {
     if (onSelectRoute) {
       onSelectRoute(route, source, destination);
@@ -176,63 +214,93 @@ export function AIRouteOptimizer({
             </Badge>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Source */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-emerald-500" /> Origin / Source
-              </Label>
-              <Select value={source} onValueChange={setSource}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Select Origin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POPULAR_LOGISTICS_HUBS.map((hub) => (
-                    <SelectItem key={hub} value={hub} className="text-xs">
-                      {hub}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-end">
+            {/* Origin / Source */}
+            <div className="md:col-span-5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1 font-medium text-foreground">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-500" /> Origin / Source
+                </Label>
+                <span className="text-[10px] text-muted-foreground font-mono">All India Hubs</span>
+              </div>
+              <LocationSearchInput
+                value={source}
+                onChange={(val) => setSource(val)}
+                placeholder="Search origin city, town, or industrial hub..."
+                iconType="origin"
+              />
+            </div>
+
+            {/* Swap Button */}
+            <div className="md:col-span-1 flex items-center justify-center pb-0.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0 border-border/80 hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-colors"
+                title="Swap Origin and Destination"
+                onClick={handleSwapLocations}
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+              </Button>
             </div>
 
             {/* Destination */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Navigation className="w-3.5 h-3.5 text-destructive" /> Destination
-              </Label>
-              <Select value={destination} onValueChange={setDestination}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Select Destination" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POPULAR_LOGISTICS_HUBS.map((hub) => (
-                    <SelectItem key={hub} value={hub} className="text-xs">
-                      {hub}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="md:col-span-4 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1 font-medium text-foreground">
+                  <Navigation className="w-3.5 h-3.5 text-rose-500" /> Destination
+                </Label>
+                <span className="text-[10px] text-muted-foreground font-mono">All India Hubs</span>
+              </div>
+              <LocationSearchInput
+                value={destination}
+                onChange={(val) => setDestination(val)}
+                placeholder="Search destination city, port, or state..."
+                iconType="destination"
+              />
             </div>
 
             {/* Cargo Type */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <div className="md:col-span-2 space-y-1.5">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1 font-medium text-foreground">
                 <Car className="w-3.5 h-3.5 text-primary" /> Cargo Profile
               </Label>
               <Select value={cargoType} onValueChange={setCargoType}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Select Cargo Type" />
+                <SelectTrigger className="h-9 text-xs bg-background">
+                  <SelectValue placeholder="Cargo Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Standard Commercial Freight" className="text-xs">Standard Commercial Freight</SelectItem>
-                  <SelectItem value="Perishable / Cold Chain (Time-Critical)" className="text-xs">Perishable / Cold Chain</SelectItem>
-                  <SelectItem value="Heavy Bulk / Steel / Machinery" className="text-xs">Heavy Bulk / Steel / Machinery</SelectItem>
-                  <SelectItem value="Hazardous / Chemical Cargo" className="text-xs">Hazardous / Chemical Cargo</SelectItem>
+                  <SelectItem value="Standard Commercial Freight" className="text-xs">Standard Freight</SelectItem>
+                  <SelectItem value="Perishable / Cold Chain (Time-Critical)" className="text-xs">Cold Chain (Perishable)</SelectItem>
+                  <SelectItem value="Heavy Bulk / Steel / Machinery" className="text-xs">Heavy Bulk / Steel</SelectItem>
+                  <SelectItem value="Hazardous / Chemical Cargo" className="text-xs">Hazardous Chemicals</SelectItem>
                   <SelectItem value="High-Value Electronics" className="text-xs">High-Value Electronics</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Quick Recommended Indian Corridors Chips */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[11px]">
+            <span className="text-xs font-medium text-muted-foreground mr-1 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-primary" /> Quick Recommendations:
+            </span>
+            {QUICK_CORRIDORS.map((corridor) => (
+              <button
+                key={corridor.name}
+                type="button"
+                onClick={() => handleQuickSelect(corridor.src, corridor.dest)}
+                className={cn(
+                  "px-2 py-1 rounded-md text-[11px] border transition-colors flex items-center gap-1",
+                  source === corridor.src && destination === corridor.dest
+                    ? "bg-primary/15 text-primary border-primary/40 font-medium shadow-xs"
+                    : "bg-muted/40 text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted"
+                )}
+              >
+                {corridor.name}
+              </button>
+            ))}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
