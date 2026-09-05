@@ -52,29 +52,8 @@ export function useDocumentExpiryNotifications() {
 
       const expiredCount = expiredDocs?.length || 0;
 
-      // Show summary toast
-      if (expiredCount > 0) {
-        toast.error(`🚨 ${expiredCount} document(s) have EXPIRED!`, {
-          description: "Go to Compliance to review and renew immediately.",
-          duration: 8000,
-        });
-      }
-
-      if (docs.length > 0) {
-        toast.warning(
-          `⚠️ ${docs.length} document(s) expiring within 30 days`,
-          {
-            description: docs
-              .slice(0, 3)
-              .map(
-                (d) =>
-                  `${d.vehicle_name} — ${d.document_type} (${new Date(d.expiry_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })})`
-              )
-              .join(" • "),
-            duration: 8000,
-          }
-        );
-      }
+      // Floating toasts disabled to avoid interrupting screen presentation.
+      // Document expiry is tracked and reviewed directly inside the Compliance view.
     }
 
     // Small delay to not block initial render

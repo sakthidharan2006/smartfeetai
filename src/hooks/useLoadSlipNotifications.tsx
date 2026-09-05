@@ -36,15 +36,8 @@ export function useLoadSlipNotifications() {
     const title = '📦 New Load Slip Submitted';
     const body = `${slip.vehicle_name}: ${slip.load_description}\n${slip.origin} → ${slip.destination}`;
 
-    // In-app toast
-    toast.info(title, {
-      description: body,
-      duration: 8000,
-      icon: <Package className="w-4 h-4 text-primary" />,
-    });
-
-    // Play a gentle notification tone (distinct from alert sirens)
-    playMessageTone();
+    // In-app floating toast disabled to prevent interrupting demo presentations
+    // Load slip is recorded and available in the Load Slips table
 
     // Browser push notification
     if (permissionRef.current === 'granted') {

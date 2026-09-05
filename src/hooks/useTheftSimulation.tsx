@@ -27,15 +27,6 @@ export function useTheftSimulation(vehicles: SimulatedVehicle[], enabled: boolea
             fuelLevel: randomVehicle.fuelLevel,
           });
           setTheftAlerts(prev => [alert, ...prev].slice(0, 50));
-
-          // Show toast notification
-          toast.error(`🚨 ${alert.title}`, {
-            description: alert.description,
-            duration: 8000,
-          });
-
-          // Play the security alert siren
-          playSecurityAlert();
         }
       }
     }, 3000);

@@ -25,7 +25,7 @@ import { useDocumentExpiryNotifications } from "@/hooks/useDocumentExpiryNotific
 
 function AlertNotificationBridge() {
   const { alerts } = useSimulation();
-  useAlertNotifications(alerts, true);
+  useAlertNotifications(alerts, false);
   useLoadSlipNotifications();
   useDocumentExpiryNotifications();
   return null;

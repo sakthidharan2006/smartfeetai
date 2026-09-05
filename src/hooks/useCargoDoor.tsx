@@ -132,7 +132,7 @@ export function useCargoDoor() {
         const row = payload.new as Partial<UnlockRequest> | null;
         if (!row) return;
         if (payload.eventType === "INSERT" && isOwner) {
-          toast.warning("Cargo door unlock approval needed", { description: row.reason ?? "" });
+          // Automatic floating toast disabled to keep presentation clean
         }
         if (payload.eventType === "UPDATE" && row.driver_id === user.id) {
           if (row.status === "approved") toast.success("Unlock approved — door open for 60s");
@@ -144,7 +144,7 @@ export function useCargoDoor() {
         setEvents((prev) => [row, ...prev].slice(0, 200));
         if (row.severity === "critical" && !seenCritical.current.has(row.id)) {
           seenCritical.current.add(row.id);
-          toast.error(row.message, { duration: 10000 });
+          // Automatic floating toast disabled
         }
       })
       .subscribe();

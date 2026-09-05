@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Wrench, AlertTriangle, CheckCircle2, Clock, IndianRupee, ShieldAlert, Cpu } from "lucide-react";
+import { Wrench, AlertTriangle, CheckCircle2, Clock, IndianRupee, ShieldAlert, Cpu, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -151,6 +151,26 @@ export function PredictiveMaintenancePanel({ predictions, onScheduleMaintenance,
                     </div>
                   </div>
                 </div>
+
+                {/* Coordinated Parts Procurement & Workshop Capacity */}
+                {p.requiredParts && (
+                  <div className="p-2 rounded bg-muted/40 border border-border/60 text-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-semibold text-foreground">
+                        <Package className="w-3 h-3 text-primary" /> Parts Procurement:
+                      </span>
+                      <Badge variant="outline" className="text-[9px] font-mono border-primary/30 text-primary bg-primary/5">
+                        {p.procurementStatus}
+                      </Badge>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground font-mono truncate">
+                      {p.requiredParts.join(" • ")}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground pt-0.5">
+                      Workshop Capacity: <strong className="text-foreground">{p.workshopBay}</strong>
+                    </div>
+                  </div>
+                )}
 
                 {/* Footer and 1-Click Action */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/60 flex-wrap gap-2">

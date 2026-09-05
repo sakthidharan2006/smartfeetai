@@ -45,6 +45,9 @@ export interface MaintenancePrediction {
   recommendedAction: string;
   urgency: "immediate" | "within_48h" | "scheduled";
   estimatedCostInr: number;
+  requiredParts?: string[];
+  procurementStatus?: string;
+  workshopBay?: string;
 }
 
 export interface DispatchCandidate {
@@ -254,6 +257,29 @@ export function evaluatePredictiveMaintenance(telemetryList: RawVehicleTelemetry
 
     const cappedRisk = Math.min(99, Math.max(5, risk));
 
+    // Dynamic spare parts & workshop bay allocation
+    let parts: string[] = ["Routine Lubricant & Filter Kit"];
+    let procurement = "In Central Stock";
+    let bay = "Bay 3 (General Maintenance)";
+
+    if (failureMode.includes("DPF") || failureMode.includes("DEF")) {
+      parts = ["BS-VI DPF Ceramic Filter Element", "AdBlue Dosing Gasket Kit"];
+      procurement = "OEM Dispatched (ETA 2.5h)";
+      bay = "Bay 4 (Emissions & Exhaust Lab)";
+    } else if (failureMode.includes("Overheating") || failureMode.includes("Gasket")) {
+      parts = ["Multi-Layer Steel Cylinder Head Gasket", "Heavy-Duty Glycol Coolant (20L)"];
+      procurement = "Depot Reserved";
+      bay = "Bay 1 (Heavy Powertrain)";
+    } else if (failureMode.includes("Brake")) {
+      parts = ["Asbestos-Free Heavy Brake Shoes (Axle Pair)", "Return Spring Set"];
+      procurement = "In Central Stock";
+      bay = "Bay 2 (Brakes & Suspension)";
+    } else if (failureMode.includes("Tire") || failureMode.includes("TPMS")) {
+      parts = ["295/80 R22.5 Tubeless Commercial Radial", "Internal TPMS Valve Sensor"];
+      procurement = "In Central Stock";
+      bay = "Bay 5 (Tire Alignment Bay)";
+    }
+
     return {
       vehicleId: v.id,
       vehicleName: v.name,
@@ -270,6 +296,9 @@ export function evaluatePredictiveMaintenance(telemetryList: RawVehicleTelemetry
       recommendedAction: action,
       urgency,
       estimatedCostInr: cost,
+      requiredParts: parts,
+      procurementStatus: procurement,
+      workshopBay: bay,
     };
   }).sort((a, b) => b.riskScore - a.riskScore);
 }

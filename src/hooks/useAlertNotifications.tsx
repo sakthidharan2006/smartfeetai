@@ -22,51 +22,9 @@ const ALERT_ICONS: Record<string, React.ReactNode> = {
   'SCR Efficiency Drop': <Gauge className="w-4 h-4 text-info" />,
 };
 
-export function useAlertNotifications(alerts: SimulatedAlert[], enabled: boolean = true) {
-  const seenAlertIds = useRef<Set<string>>(new Set());
-
-  const showNotification = useCallback((alert: SimulatedAlert) => {
-    const icon = ALERT_ICONS[alert.title] || <Bell className="w-4 h-4 text-muted-foreground" />;
-
-    // Play sound based on severity
-    SOUNDS[alert.type]?.();
-
-    // Show toast
-    if (alert.type === 'critical') {
-      toast.error(alert.title, {
-        description: `${alert.vehicleName}: ${alert.message}`,
-        duration: 6000,
-        icon,
-      });
-    } else if (alert.type === 'warning') {
-      toast.warning(alert.title, {
-        description: `${alert.vehicleName}: ${alert.message}`,
-        duration: 5000,
-        icon,
-      });
-    } else {
-      toast.info(alert.title, {
-        description: `${alert.vehicleName}: ${alert.message}`,
-        duration: 4000,
-        icon,
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    for (const alert of alerts) {
-      if (!seenAlertIds.current.has(alert.id)) {
-        seenAlertIds.current.add(alert.id);
-        showNotification(alert);
-      }
-    }
-
-    // Prune old IDs to prevent memory leak (keep last 200)
-    if (seenAlertIds.current.size > 200) {
-      const ids = Array.from(seenAlertIds.current);
-      seenAlertIds.current = new Set(ids.slice(-100));
-    }
-  }, [alerts, enabled, showNotification]);
+export function useAlertNotifications(alerts: SimulatedAlert[], enabled: boolean = false) {
+  // Floating notifications disabled so alerts don't float across the screen during live evaluation/demos.
+  // All alerts remain stored in SimulationContext and visible in Alerts, Dashboard, and Notifications views.
+  return;
 }
+

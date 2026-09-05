@@ -25,6 +25,8 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
   return true;
 }
 
+export const exportToCsv = downloadCsv;
+
 /** Toggle fullscreen for a given element. */
 export async function toggleFullscreen(el: HTMLElement | null) {
   if (!el) return;
